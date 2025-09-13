@@ -50,11 +50,17 @@ import authService from './appwrite/auth.js';
 import { Header, Footer } from './components/index.js';
 import { login, logout } from './store/authSlice.js';
 import { Outlet } from 'react-router-dom';
+import { useToast } from './hooks/useToast';
+import ToastContainer from './components/ToastContainer';
+import LoadingSpinner from './components/LoadingSpinner';
+import { useDarkMode } from './hooks/useDarkMode';
 import './App.css';
 
 function App() {
   const [loading, setLoading] = useState(true);
   const dispatch = useDispatch();
+  const { toasts, removeToast } = useToast();
+  const { isDarkMode } = useDarkMode();
 
   useEffect(() => {
     authService.getCurrentUser()
@@ -71,10 +77,31 @@ function App() {
       .finally(() => setLoading(false));
   }, [dispatch]);
 
-  if (loading) return null; // Can replace with a spinner component
+  if (loading) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center transition-colors duration-200 ${
+        isDarkMode 
+          ? 'bg-gradient-to-br from-gray-800 via-gray-900 to-black' 
+          : 'bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400'
+      }`}>
+        <div className="text-center">
+          <LoadingSpinner size="xl" />
+          <p className={`mt-4 text-lg transition-colors duration-200 ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          }`}>
+            Loading your blog experience...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full h-full min-h-screen flex flex-col bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400 text-gray-900">
+    <div className={`w-full h-full min-h-screen flex flex-col transition-colors duration-200 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-800 via-gray-900 to-black text-gray-100' 
+        : 'bg-gradient-to-br from-gray-200 via-gray-300 to-gray-400 text-gray-900'
+    }`}>
       <Header />
 
       <main className="flex-grow px-4 py-6">
@@ -82,6 +109,8 @@ function App() {
       </main>
 
       <Footer />
+      
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

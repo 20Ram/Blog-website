@@ -31,11 +31,11 @@ function PostCard({ $id, title, featuredimage }) {
       <div className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200">
         <div className="relative w-full aspect-video">
         <img
-  src={appwriteService.getFilePreview(featuredimage).href}
-  alt={title}
-  className="absolute inset-0 w-full h-full object-cover"
-  loading="lazy"
-/>
+          src={appwriteService.getFilePreview(featuredimage).href}
+          alt={title}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+        />
 
         </div>
 

@@ -1,7 +1,7 @@
 import conf from "../conf/conf.js";
 import { Client,ID, Databases, Storage ,Query } from "appwrite";
 
-export class Servise {
+export class Service {
   client = new Client();
   databases;
   bucket;
@@ -45,7 +45,7 @@ export class Servise {
   }
   
   // update a blog post
-  async upDatePost(slug, {title, content, featuredimage,  status}){
+  async updatePost(slug, {title, content, featuredimage,  status}){
     try {
       return await this.databases.updateDocument(
         conf.appwriteDatabaseId,
@@ -111,6 +111,29 @@ export class Servise {
     }
   }
 
+  // get posts with pagination and optional search
+  async getPaginatedPosts({ page = 1, perPage = 8, searchTerm = "" } = {}) {
+    try {
+      const queries = [Query.equal("status", "active"), Query.limit(perPage), Query.offset((page - 1) * perPage)];
+
+      // Optional full-text search on title or content if provided
+      if (searchTerm && typeof searchTerm === "string" && searchTerm.trim() !== "") {
+        // Appwrite supports Query.search per attribute. We'll OR by fetching title first, then content if needed.
+        // Prefer a broad search on title; clients can further filter content locally if desired.
+        queries.push(Query.search("title", searchTerm.trim()));
+      }
+
+      return await this.databases.listDocuments(
+        conf.appwriteDatabaseId,
+        conf.appwriteCollectionId,
+        queries,
+      );
+    } catch (error) {
+      console.log("Appwrite service :: getPaginatedPosts :: error", error);
+      return false;
+    }
+  }
+
   // fill upload featured image
   async uploadFile(file){
     try {
@@ -166,5 +189,5 @@ export class Servise {
   }
 }
 
-const servise = new Servise();
-export default servise
+const service = new Service();
+export default service

@@ -94,24 +94,36 @@ import { login } from '../store/authSlice'
 import { Button, Input, Logo } from './index.js'
 import { useDispatch } from 'react-redux'
 import { useForm } from 'react-hook-form'
+import { useToast } from '../hooks/useToast'
 
 function Signup() {
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { register, handleSubmit } = useForm()
-  const [error, setError] = useState('')
+  const { register, handleSubmit, formState: { errors } } = useForm()
+  const { error: showError, success } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
 
   const create = async (data) => {
-    setError('')
+    setIsLoading(true)
     try {
       const userData = await authService.createAccount(data)
       if (userData) {
         const currentUser = await authService.getCurrentUser()
-        if (currentUser) dispatch(login(currentUser))
-        navigate('/')
+        if (currentUser) {
+          dispatch(login(currentUser))
+          success('Account created successfully! Welcome to our blog platform.')
+          navigate('/')
+        } else {
+          showError('Account created but failed to log in. Please try logging in manually.')
+        }
+      } else {
+        showError('Failed to create account. Please try again.')
       }
     } catch (error) {
-      setError(error.message)
+      console.error('Signup error:', error)
+      showError(error.message || 'Failed to create account. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -141,7 +153,9 @@ function Signup() {
           </Link>
         </p>
 
-        {error && <p className="text-red-500 mt-6 text-center">{error}</p>}
+        {errors.name && <p className="text-red-600 mt-2 text-sm">{errors.name.message}</p>}
+        {errors.email && <p className="text-red-600 mt-2 text-sm">{errors.email.message}</p>}
+        {errors.password && <p className="text-red-600 mt-2 text-sm">{errors.password.message}</p>}
 
         <form onSubmit={handleSubmit(create)} className="mt-8">
           <div className="space-y-5">
@@ -173,8 +187,12 @@ function Signup() {
                 required: true,
               })}
             />
-            <Button type="submit" className="w-full hover:scale-[1.02] transition">
-              Create Account
+            <Button 
+              type="submit" 
+              className="w-full hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </div>
         </form>

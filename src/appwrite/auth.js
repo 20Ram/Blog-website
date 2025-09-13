@@ -1,11 +1,14 @@
 import conf from "../conf/conf.js";
 import { Client, Account , ID } from "appwrite";
+import { validateAppwriteConfig } from "../utils/validateEnv.js";
 
  export class AuthService {
     client = new Client();
     account;
 
     constructor(){
+      // Validate env at runtime for clearer errors during development
+      validateAppwriteConfig(conf);
       this.client
           .setEndpoint(conf.appwriteUrl)
           .setProject(conf.appwriteProjectId);
@@ -32,8 +35,14 @@ import { Client, Account , ID } from "appwrite";
       try {
       return  await this.account.createEmailPasswordSession(email,password)
       } catch (error) {
-        // throw error;
-        console.log("Login error" + error);
+        // Bubble a meaningful error up to the UI
+        if (error?.code === 404) {
+          throw new Error("Appwrite Project not found. Check VITE_APPWRITE_PROJECT_ID and VITE_APPWRITE_URL.");
+        }
+        if (error?.code === 401) {
+          throw new Error("Invalid email or password.");
+        }
+        throw error;
       }
     }
  // Get the currently logged-in user

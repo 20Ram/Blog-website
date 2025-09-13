@@ -132,12 +132,13 @@
 
 
 
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button, Input, RTE, Select } from ".."; // Custom components
 import appwriteService from "../../appwrite/config";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useToast } from "../../hooks/useToast";
 
 export default function PostForm({ post }) {
     const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
@@ -151,33 +152,46 @@ export default function PostForm({ post }) {
 
     const navigate = useNavigate();
     const userData = useSelector((state) => state.auth.userData);
+    const { success, error: showError } = useToast();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const submit = async (data) => {
+        setIsSubmitting(true);
         try {
             if (post) {
+                // Update existing post
                 const file = data.image[0] ? await appwriteService.uploadFile(data.image[0]) : null;
 
                 if (file) {
                     await appwriteService.deleteFile(post.featuredimage);
                 }
 
-                const dbPost = await appwriteService.upDatePost(post.$id, {
+                const dbPost = await appwriteService.updatePost(post.$id, {
                     ...data,
                     featuredimage: file ? file.$id : post.featuredimage,
                 });
 
                 if (dbPost) {
+                    success("Post updated successfully!");
                     navigate(`/post/${dbPost.$id}`);
+                } else {
+                    showError("Failed to update post. Please try again.");
                 }
             } else {
+                // Create new post
                 if (!userData) {
-                    console.error("User not logged in");
+                    showError("You must be logged in to create a post.");
+                    return;
+                }
+
+                if (!data.image || !data.image[0]) {
+                    showError("Please select a featured image for your post.");
                     return;
                 }
 
                 const file = await appwriteService.uploadFile(data.image[0]);
                 if (!file) {
-                    console.error("File upload failed");
+                    showError("Failed to upload image. Please try again.");
                     return;
                 }
 
@@ -188,11 +202,17 @@ export default function PostForm({ post }) {
                 });
 
                 if (newPost) {
+                    success("Post created successfully!");
                     navigate(`/post/${newPost.$id}`);
+                } else {
+                    showError("Failed to create post. Please try again.");
                 }
             }
         } catch (err) {
             console.error("Post submission error:", err);
+            showError(err.message || "An unexpected error occurred. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -258,10 +278,10 @@ export default function PostForm({ post }) {
                 {post?.featuredimage && (
                     <div className="w-full mb-4">
                         <img
-    src={appwriteService.getFilePreview(post.featuredimage).href}
-    alt={post.title}
-    className="rounded-lg w-full object-cover shadow-md border border-gray-200"
-/>
+                            src={appwriteService.getFilePreview(post.featuredimage).href}
+                            alt={post.title}
+                            className="rounded-lg w-full object-cover shadow-md border border-gray-200"
+                        />
 
                     </div>
                 )}
@@ -273,8 +293,13 @@ export default function PostForm({ post }) {
                     {...register("status", { required: true })}
                 />
 
-                <Button type="submit" bgColor={post ? "bg-green-500" : "bg-blue-500"} className="w-full">
-                    {post ? "Update Post" : "Create Post"}
+                <Button 
+                    type="submit" 
+                    bgColor={post ? "green" : "blue"} 
+                    className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "Processing..." : (post ? "Update Post" : "Create Post")}
                 </Button>
             </div>
         </form>
